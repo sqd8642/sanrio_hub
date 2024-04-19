@@ -4,55 +4,149 @@ import (
 	"time"
     "net/http"
     "sanriohub.pavelkan.net/internal/data"
+	"errors"
     
 )
 
 func (app *application) addCharHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		ID int64 `json:"id"`
 	    Name string `json:"name"`
 	    Debut time.Time `json:"debut"`
 	    Description string `json:"description"`
 	    Personality string `json:"personality"`
 	    Hobbies string `json:"hobbies"`
 	    Affiliations []string `json:"affiliations"`
-	    Version int32 `json:"version"`
 	}
-	err := json.NewDecoder(r.Body).Decode(&input)
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+		
+    char := &data.Character{
+		Name: input.Name,
+	    Debut: input.Debut,
+	    Description: input.Description,
+	    Personality: input.Personality,
+	    Hobbies: input.Hobbies,
+	    Affiliations: input.Affiliations,
+	}
+
+    err = app.models.Characters.Insert(char)
     if err != nil {
-        app.errorResponse(w, r, http.StatusBadRequest, err.Error())
-        return
+		app.serverErrorResponse(w, r, err)
+		return
 	}
-    fmt.Fprintf(w, "%+v\n", input)
+
+	headers := make(http.Header)
+    headers.Set("Location", fmt.Sprintf("/v1/movies/%d", char.ID))
+
+    err = app.writeJSON(w, http.StatusCreated, envelope{"char": char}, headers)
+    if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
 func (app *application) showCharHandler(w http.ResponseWriter, r *http.Request) {
-	// When httprouter is parsing a request, any interpolated URL parameters will be
-	// stored in the request context. We can use the ParamsFromContext() function to
-	// retrieve a slice containing these parameter names and values.
 	
 	id, err := app.readIDParam(r)
-	
-	if err != nil {
-	    http.NotFound(w, r)
-	    return
-	} 
-
-	character := data.Character{
-		ID: id,
-	    Name: "Kuromi", 
-	    Debut: time.Date(2005, time.September, 1, 0, 0, 0, 0, time.UTC),
-	    Description: "Kuromi is a character from the My Melody universe. She is My Melody's rival and doppelgänger, and manifests as a white rabbit or imp-like creature wearing a black jester's hat with a pink skull on the front and a black devil's tail. The skull's facial expression on her forehead changes to match Kuromi's mood. Fittingly, her birthday is on Halloween (October 31st).",
-	    Personality: "Although Kuromi may look and act tough and punk, she is actually very girly and is attracted to good-looking guys! Kuromi enjoys writing in her diary and is hooked on romantic short stories. Her favorite colors are black and hot pink. Her favorite food is shallots, all kinds of meat, and in recent Kuromi merchandise, cherries have been shown. Despite being a villain (in Onegai My Melody), Kuromi is mostly into food and even cooks. You might call her a rowdy free spirit.Kuromi is the punk tomboy counterpart to My Melody. Although My Melody can get along with Kuromi, the latter's feelings are more inclined to rivalry in order to appear tough.",
-	    Hobbies: "Kuromi's hobbies include writing in his diary, cooking and reading romance novels.",
-	    Affiliations: []string{"Hello Kitty", "MyMelody", "Pompompurin", "Chococat", "Keroppi", "Cinnamoroll", "Pochacco", "Badtz-Maru"},
-	    Version: 1,
-	}
-	err = app.writeJSON(w, http.StatusOK, envelope{"character": character}, nil)
-    if err != nil { 
-        app.logger.Print(err)
-        http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+    if err != nil {
+        app.notFoundResponse(w, r)
+        return
     }
+    
+	char, err := app.models.Characters.Get(id)
+	if err != nil {
+		switch {
+		    case errors.Is(err, data.ErrRecordNotFound):
+		        app.notFoundResponse(w, r)
+		    default:
+		        app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+		
+	err = app.writeJSON(w, http.StatusOK, envelope{"character": char}, nil)
+    if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}	
+}
+
+func (app *application) updateCharHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := app.readIDParam(r)
+    if err != nil {
+        app.notFoundResponse(w, r)
+        return
+    }
+
+	char, err := app.models.Characters.Get(id)
+    if err != nil {
+		switch {
+		    case errors.Is(err, data.ErrRecordNotFound):
+		        app.notFoundResponse(w, r)
+		    default:
+		        app.serverErrorResponse(w, r, err)
+		    }
+		return
+	}
+	var input struct {
+		Name string `json: "title"`
+		Debut time.Time  `json: "debut"`
+		Description string `json:"description"`
+	    Personality string `json:"personality"`
+	    Hobbies string `json:"hobbies"`
+	    Affiliations []string `json:"affiliations"`
+	}
+
+	err = app.readJSON(w, r, &input)
+    if err != nil {
+        app.badRequestResponse(w, r, err)
+        return
+	}
+
+	char.Name = input.Name
+	char.Debut = input.Debut
+	char.Description = input.Description
+	char.Personality = input.Personality
+	char.Hobbies = input.Hobbies
+	char.Affiliations = input.Affiliations
+
+	err = app.models.Characters.Update(char)
+	if err != nil {
+		app.serverErrorResponse(w,r,err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"character":char}, nil)
+	if err!= nil{
+		app.serverErrorResponse(w,r,err)
+	}
+
+			
+}
+
+func (app *application) deleteCharHandler(w http.ResponseWriter, r *http.Request){
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w,r)
+		return
+	}
+
+	err = app.models.Characters.Delete(id)
+	if err!= nil {
+		switch  {
+	        case errors.Is(err, data.ErrRecordNotFound):
+		        app.notFoundResponse(w, r)
+		    default:
+		        app.serverErrorResponse(w, r, err)
+	    }
+	    return
+    }
+		err = app.writeJSON(w, http.StatusOK, envelope{"message": "character successfully deleted"}, nil)
+		if err != nil {
+		app.serverErrorResponse(w, r, err)
+		}
 }
 
 	
