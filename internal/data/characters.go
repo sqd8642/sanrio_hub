@@ -110,12 +110,12 @@ func (c CharacterModel) Delete(id int64) error {
 }
 	
 func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, error) {
-	query :=  fmt.Sprintf("SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC", filter.sortColumn(), filter.sortDirection())
+	query :=  fmt.Sprintf("SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4", filter.sortColumn(), filter.sortDirection())
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel() 
 
-	rows, err := c.DB.QueryContext(ctx, query, name, pq.Array(affiliations))
+	rows, err := c.DB.QueryContext(ctx, query, name, pq.Array(affiliations),  filter.limit(), filter.offset() )
     if err != nil {
         return nil, err
     }
