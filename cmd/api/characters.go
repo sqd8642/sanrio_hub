@@ -179,11 +179,12 @@ func (app *application) listCharsHandler(w http.ResponseWriter, r *http.Request)
 
 	qs := r.URL.Query()
 
-	input.Name = app.readString(qs, "title", "")
-    input.Affiliations = app.readCSV(qs, "genres", []string{})
+	input.Name = app.readString(qs, "name", "")
+    input.Affiliations = app.readCSV(qs, "affiliations", []string{})
 	input.Filters.Page = app.readInt(qs, "page", 1)
     input.Filters.PageSize = app.readInt(qs, "page_size", 20)
 	input.Filters.Sort = app.readString(qs, "sort", "id")
+    input.Filters.SortSafelist = []string{"id", "name", "debyt", "-id", "-name", "-debut"}
 
 	chars, err := app.models.Characters.GetAll(input.Name, input.Affiliations, input.Filters)
 	if err!= nil {

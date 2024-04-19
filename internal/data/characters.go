@@ -109,12 +109,12 @@ func (c CharacterModel) Delete(id int64) error {
 }
 	
 func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, error) {
-	query := "SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters ORDER BY id"
+	query := "SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (LOWER(name) = LOWER($1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY id"
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel() 
 
-	rows, err := c.DB.QueryContext(ctx, query)
+	rows, err := c.DB.QueryContext(ctx, query, name, pq.Array(affiliations))
     if err != nil {
         return nil, err
     }
