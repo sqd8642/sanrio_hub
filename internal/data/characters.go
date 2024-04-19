@@ -23,9 +23,9 @@ type CharacterModel struct {
 }
 
 func (c CharacterModel) Insert(char *Character) error {
-	query := "INSERT INTO characters (name, debut, description, hobbies, affiliations) VALUES ($1, $2, $3, $4, $5) RETURNING id, version"
+	query := "INSERT INTO characters (name, debut, description, hobbies, affiliations, personality) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, version"
 
-	args := []any{char.Name, char.Debut, char.Description, char.Hobbies, pq.Array(char.Affiliations)}
+	args := []any{char.Name, char.Debut, char.Description, char.Hobbies, pq.Array(char.Affiliations), char.Personality}
     return c.DB.QueryRow(query, args...).Scan(&char.ID, &char.Version)
 
 }
@@ -60,7 +60,7 @@ func (c CharacterModel) Get(id int64) (*Character, error){
 }
 
 func (c CharacterModel) Update(char *Character) error {
-	query := "UPDATE characters SET name = $1, debut = $2, description = $3, personality= $4, hobbies =$5, affiliations =$6, version = version + 1 WHERE id = $7 RETURNING version"
+	query := "UPDATE characters SET name = $1, debut = $2, description = $3, personality= $4, hobbies =$5, affiliations =$6, version = version + 1 WHERE id = $7 AND version = $8 RETURNING version"
     
 	args := []any{
 		char.Name,
@@ -70,9 +70,19 @@ func (c CharacterModel) Update(char *Character) error {
 		char.Hobbies,
 		pq.Array(&char.Affiliations),
 		char.ID,
+		char.Version,
 	}
 	
-	return c.DB.QueryRow(query, args...).Scan(&char.Version)
+	err := c.DB.QueryRow(query, args...).Scan(&char.Version)
+	if err != nil {
+		switch{
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 func (c CharacterModel) Delete(id int64) error {

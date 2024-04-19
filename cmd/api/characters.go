@@ -90,33 +90,53 @@ func (app *application) updateCharHandler(w http.ResponseWriter, r *http.Request
 		    }
 		return
 	}
+
 	var input struct {
-		Name string `json: "title"`
-		Debut time.Time  `json: "debut"`
-		Description string `json:"description"`
-	    Personality string `json:"personality"`
-	    Hobbies string `json:"hobbies"`
+		Name *string `json: "title"`
+		Debut *time.Time  `json: "debut"`
+		Description *string `json:"description"`
+	    Personality *string `json:"personality"`
+	    Hobbies *string `json:"hobbies"`
 	    Affiliations []string `json:"affiliations"`
 	}
 
 	err = app.readJSON(w, r, &input)
+
     if err != nil {
         app.badRequestResponse(w, r, err)
         return
 	}
 
-	char.Name = input.Name
-	char.Debut = input.Debut
-	char.Description = input.Description
-	char.Personality = input.Personality
-	char.Hobbies = input.Hobbies
-	char.Affiliations = input.Affiliations
+	if input.Name != nil {
+		char.Name = *input.Name
+	}
+	if input.Debut != nil {
+		char.Debut = *input.Debut
+	}
+	if input.Description != nil {
+		char.Description = *input.Description
+	}
+	if input.Personality != nil {
+		char.Personality = *input.Personality
+	}
+	if input.Hobbies != nil {
+		char.Hobbies = *input.Hobbies
+	}
+	if input.Affiliations != nil {
+		char.Affiliations = input.Affiliations
+	}
 
 	err = app.models.Characters.Update(char)
 	if err != nil {
-		app.serverErrorResponse(w,r,err)
-		return
-	}
+        switch {
+            case errors.Is(err, data.ErrEditConflict):
+                app.EditConflictResponse(w, r)
+            default:
+                app.serverErrorResponse(w, r, err)
+        }
+    return
+}
+
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"character":char}, nil)
 	if err!= nil{
