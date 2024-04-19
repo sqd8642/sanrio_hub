@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/lib/pq" 
 	"context"
+	"fmt"
 )
 
 type Character struct {
@@ -109,7 +110,7 @@ func (c CharacterModel) Delete(id int64) error {
 }
 	
 func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, error) {
-	query := "SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (LOWER(name) = LOWER($1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY id"
+	query :=  fmt.Sprintf("SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC", filter.sortColumn(), filter.sortDirection())
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel() 
