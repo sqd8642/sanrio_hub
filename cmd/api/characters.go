@@ -169,5 +169,31 @@ func (app *application) deleteCharHandler(w http.ResponseWriter, r *http.Request
 		}
 }
 
-	
-	
+func (app *application) listCharsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var input struct {
+		Name string 
+		Affiliations []string 
+		data.Filters
+	}
+
+	qs := r.URL.Query()
+
+	input.Name = app.readString(qs, "title", "")
+    input.Affiliations = app.readCSV(qs, "genres", []string{})
+	input.Filters.Page = app.readInt(qs, "page", 1)
+    input.Filters.PageSize = app.readInt(qs, "page_size", 20)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+
+	chars, err := app.models.Characters.GetAll(input.Name, input.Affiliations, input.Filters)
+	if err!= nil {
+		app.serverErrorResponse(w,r,err)
+		return 
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"characters:": chars}, nil)
+	if err != nil {
+		app.serverErrorResponse(w,r, err)
+	}
+}
+

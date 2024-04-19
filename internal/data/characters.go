@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/lib/pq" 
+	"context"
 )
 
 type Character struct {
@@ -107,3 +108,41 @@ func (c CharacterModel) Delete(id int64) error {
 	return nil
 }
 	
+func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, error) {
+	query := "SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters ORDER BY id"
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+    defer cancel() 
+
+	rows, err := c.DB.QueryContext(ctx, query)
+    if err != nil {
+        return nil, err
+    }
+	defer rows.Close()
+
+	chars := []*Character{}
+
+	for rows.Next() {
+		var char Character
+
+		err := rows.Scan(
+			&char.ID,
+			&char.Name,
+			&char.Debut,
+			&char.Description,
+			&char.Personality,
+			&char.Hobbies,
+			pq.Array(&char.Affiliations),
+            &char.Version,
+		)
+		if err!= nil {
+			return nil, err
+		}
+		chars = append(chars, &char)
+	}
+	if err = rows.Err(); err !=nil {
+		return nil, err
+	}
+
+	return chars, nil
+}

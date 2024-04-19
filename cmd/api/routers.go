@@ -14,6 +14,6 @@ func (app *application) routes() *httprouter.Router {
     router.HandlerFunc(http.MethodGet, "/v1/characters/:id", app.showCharHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/characters/:id", app.updateCharHandler)
 	router.HandlerFunc(http.MethodDelete,"/v1/characters/:id", app.deleteCharHandler)
-    
+	router.HandlerFunc(http.MethodGet,"/v1/characters", app.listCharsHandler)
 	return router
 }
