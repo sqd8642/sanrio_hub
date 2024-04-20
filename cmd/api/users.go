@@ -93,3 +93,4 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
         app.serverErrorResponse(w, r, err)
     }
 }
+
