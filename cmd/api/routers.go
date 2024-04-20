@@ -15,5 +15,10 @@ func (app *application) routes() *httprouter.Router {
 	router.HandlerFunc(http.MethodPatch, "/v1/characters/:id", app.updateCharHandler)
 	router.HandlerFunc(http.MethodDelete,"/v1/characters/:id", app.deleteCharHandler)
 	router.HandlerFunc(http.MethodGet,"/v1/characters", app.listCharsHandler)
+
+	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
+
+
 	return router
 }

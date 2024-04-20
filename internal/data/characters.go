@@ -109,24 +109,27 @@ func (c CharacterModel) Delete(id int64) error {
 	return nil
 }
 	
-func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, error) {
-	query :=  fmt.Sprintf("SELECT id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4", filter.sortColumn(), filter.sortDirection())
+func (c CharacterModel) GetAll(name string, affiliations []string, filter Filters)([]*Character, Metadata, error) {
+	query :=  fmt.Sprintf("SELECT count(*) OVER(), id, name, debut, description, personality, hobbies, affiliations, version FROM characters WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (affiliations @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4", filter.sortColumn(), filter.sortDirection())
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel() 
 
 	rows, err := c.DB.QueryContext(ctx, query, name, pq.Array(affiliations),  filter.limit(), filter.offset() )
     if err != nil {
-        return nil, err
-    }
+		return nil, Metadata{}, err 
+	}
+		
 	defer rows.Close()
 
+	totalRecords := 0
 	chars := []*Character{}
 
 	for rows.Next() {
 		var char Character
 
 		err := rows.Scan(
+			&totalRecords,
 			&char.ID,
 			&char.Name,
 			&char.Debut,
@@ -136,14 +139,17 @@ func (c CharacterModel) GetAll(name string, affiliations []string, filter Filter
 			pq.Array(&char.Affiliations),
             &char.Version,
 		)
-		if err!= nil {
-			return nil, err
+		if err != nil {
+			return nil, Metadata{}, err 
 		}
+			
 		chars = append(chars, &char)
 	}
 	if err = rows.Err(); err !=nil {
-		return nil, err
+		return nil,Metadata{}, err
 	}
 
-	return chars, nil
+	metadata := calculateMetadata(totalRecords, filter.Page, filter.PageSize)
+
+	return chars, metadata, nil
 }

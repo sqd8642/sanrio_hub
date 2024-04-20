@@ -186,13 +186,13 @@ func (app *application) listCharsHandler(w http.ResponseWriter, r *http.Request)
 	input.Filters.Sort = app.readString(qs, "sort", "id")
     input.Filters.SortSafelist = []string{"id", "name", "debyt", "-id", "-name", "-debut"}
 
-	chars, err := app.models.Characters.GetAll(input.Name, input.Affiliations, input.Filters)
+	chars, metadata, err := app.models.Characters.GetAll(input.Name, input.Affiliations, input.Filters)
 	if err!= nil {
 		app.serverErrorResponse(w,r,err)
 		return 
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"characters:": chars}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"characters:": chars, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w,r, err)
 	}
