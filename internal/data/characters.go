@@ -195,7 +195,14 @@ func (c CharacterModel) GetCharactersByID(ids []int64) ([]*Character, error) {
     var characters []*Character
     for rows.Next() {
         var char Character
-        if err := rows.Scan(&char.ID, &char.Name); err != nil {
+        if err := rows.Scan(&char.ID,
+			&char.Name,
+			&char.Debut,
+			&char.Description,
+			&char.Personality,
+			&char.Hobbies,
+			pq.Array(&char.Affiliations),
+            &char.Version,); err != nil {
             return nil, err
         }
         characters = append(characters, &char)
