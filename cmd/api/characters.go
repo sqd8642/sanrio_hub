@@ -38,6 +38,7 @@ func (app *application) addCharHandler(w http.ResponseWriter, r *http.Request) {
 	
 	if data.ValidateChar(v, char); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
+		return
 	}
 
     err = app.models.Characters.Insert(char)
