@@ -35,7 +35,6 @@ func (app *application) addCharHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := validator.New()
 
-	
 	if data.ValidateChar(v, char); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
