@@ -179,7 +179,7 @@ func (c CharacterModel) GetCharactersByID(ids []int64) ([]*Character, error) {
 
     // Construct the SQL query with the IN clause
     query := fmt.Sprintf(`
-        SELECT id, name
+        SELECT id, name, debut, description, personality, hobbies, affiliations, version
         FROM characters
         WHERE id IN (%s);
     `, inClause)
