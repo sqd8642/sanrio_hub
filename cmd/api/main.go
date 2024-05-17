@@ -49,7 +49,7 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 8080, "API server host")
 	flag.StringVar(&cfg.migrations, "migrations", "", "Path to migration files folder. If not provided, migrations do not applied")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "db", "postgresql://doadmin:show-password@db-postgresql-fra1-12636-do-user-16680281-0.c.db.ondigitalocean.com:25060/defaultdb?sslmode=require", "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db", "postgresql://doadmin:AVNS_QRAyuj-FT0TxnH3RVsp@db-postgresql-fra1-12636-do-user-16680281-0.c.db.ondigitalocean.com:25060/defaultdb?sslmode=require", "PostgreSQL DSN")
     flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
     flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
     flag.StringVar(&cfg.smtp.username, "smtp-username", "7590dd4f0d4c7f", "SMTP username")
