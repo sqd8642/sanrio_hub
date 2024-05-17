@@ -4,6 +4,7 @@ import (
 	"errors"
     "net/http"
     "sanriohub.pavelkan.net/internal/data"
+    "sanriohub.pavelkan.net/internal/validator"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,23 +35,27 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
     }
 
 	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
-
-	data := map[string]any{
+    if err != nil {
+        app.serverErrorResponse(w, r, err)
+        return
+    } 
+	/* data := map[string]any{
 		"activationToken": token.Plaintext,
 		"userID": user.ID,
 		}
 		
     err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
-
-	if err != nil {
-        app.serverErrorResponse(w, r, err)
-        return
-    }
-
-    err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
     if err != nil {
         app.serverErrorResponse(w, r, err)
+        return
+    } */
+
+    var res struct {
+        Token *string `json:"token"`
     }
+    
+    res.Token = &token.Plaintext
+    err = app.writeJSON(w, http.StatusAccepted, envelope{"user": res}, nil)
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +68,12 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
         return
     }
 
+    v:= validator.New()
+
+    if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
+        app.failedValidationResponse(w, r, v.Errors)
+        return
+    }
 
     user, err := app.models.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
     if err != nil {

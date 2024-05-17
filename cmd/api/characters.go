@@ -4,6 +4,7 @@ import (
 	"time"
     "net/http"
     "sanriohub.pavelkan.net/internal/data"
+	"sanriohub.pavelkan.net/internal/validator"
 	"errors"
     
 )
@@ -30,6 +31,13 @@ func (app *application) addCharHandler(w http.ResponseWriter, r *http.Request) {
 	    Personality: input.Personality,
 	    Hobbies: input.Hobbies,
 	    Affiliations: input.Affiliations,
+	}
+
+	v := validator.New()
+
+	
+	if data.ValidateChar(v, char); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 	}
 
     err = app.models.Characters.Insert(char)
@@ -107,7 +115,7 @@ func (app *application) updateCharHandler(w http.ResponseWriter, r *http.Request
         return
 	}
 
-	if input.Name != nil {
+    if input.Name != nil {
 		char.Name = *input.Name
 	}
 	if input.Debut != nil {
@@ -125,6 +133,12 @@ func (app *application) updateCharHandler(w http.ResponseWriter, r *http.Request
 	if input.Affiliations != nil {
 		char.Affiliations = input.Affiliations
 	}
+	v := validator.New()
+
+	if data.ValidateChar(v, char); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
 
 	err = app.models.Characters.Update(char)
 	if err != nil {
@@ -134,16 +148,14 @@ func (app *application) updateCharHandler(w http.ResponseWriter, r *http.Request
             default:
                 app.serverErrorResponse(w, r, err)
         }
-    return
-}
+        return
+    }
 
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"character":char}, nil)
 	if err!= nil{
 		app.serverErrorResponse(w,r,err)
-	}
-
-			
+	}		
 }
 
 func (app *application) deleteCharHandler(w http.ResponseWriter, r *http.Request){
@@ -177,22 +189,28 @@ func (app *application) listCharsHandler(w http.ResponseWriter, r *http.Request)
 		data.Filters
 	}
 
+	v := validator.New()
+
 	qs := r.URL.Query()
 
 	input.Name = app.readString(qs, "name", "")
     input.Affiliations = app.readCSV(qs, "affiliations", []string{})
-	input.Filters.Page = app.readInt(qs, "page", 1)
-    input.Filters.PageSize = app.readInt(qs, "page_size", 20)
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+    input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
 	input.Filters.Sort = app.readString(qs, "sort", "id")
     input.Filters.SortSafelist = []string{"id", "name", "debyt", "-id", "-name", "-debut"}
 
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+	    return
+	}
 	chars, metadata, err := app.models.Characters.GetAll(input.Name, input.Affiliations, input.Filters)
 	if err!= nil {
 		app.serverErrorResponse(w,r,err)
 		return 
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"characters:": chars, "metadata": metadata}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"characters": chars, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w,r, err)
 	}

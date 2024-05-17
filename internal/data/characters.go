@@ -7,6 +7,8 @@ import (
 	"github.com/lib/pq" 
 	"context"
 	"fmt"
+	"sanriohub.pavelkan.net/internal/validator"
+	"strings"
 )
 
 type Character struct {
@@ -18,6 +20,16 @@ type Character struct {
 	Hobbies string `json:"hobbies"`
 	Affiliations []string `json:"affiliations"`
 	Version int32 `json:"version"`
+}
+
+func ValidateChar(v *validator.Validator, character *Character) {
+	v.Check(character.Name != "","name", "must be provided")
+    v.Check(character.Description != "","desc", "must be provided")
+	v.Check(character.Hobbies != "","hobbies", "must be provided")
+	v.Check(character.Affiliations != nil,"affiliations", "must be provided")
+	v.Check(len(character.Affiliations)>=1,"affiliations", "must contain at least 1 affiliation")
+	v.Check(validator.Unique(character.Affiliations), "affiliations", "must not contain duplicates")
+
 }
 
 type CharacterModel struct {
@@ -152,4 +164,45 @@ func (c CharacterModel) GetAll(name string, affiliations []string, filter Filter
 	metadata := calculateMetadata(totalRecords, filter.Page, filter.PageSize)
 
 	return chars, metadata, nil
+}
+
+func (c CharacterModel) GetCharactersByID(ids []int64) ([]*Character, error) {
+    // Prepare the placeholders for the IN clause
+    placeholders := make([]string, len(ids))
+    args := make([]interface{}, len(ids))
+    for i, id := range ids {
+        placeholders[i] = fmt.Sprintf("$%d", i+1)
+        args[i] = id
+    }
+    // Construct the IN clause
+    inClause := strings.Join(placeholders, ", ")
+
+    // Construct the SQL query with the IN clause
+    query := fmt.Sprintf(`
+        SELECT id, name
+        FROM characters
+        WHERE id IN (%s);
+    `, inClause)
+
+    // Execute the query
+    rows, err := c.DB.Query(query, args...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    // Iterate over the rows and scan characters
+    var characters []*Character
+    for rows.Next() {
+        var char Character
+        if err := rows.Scan(&char.ID, &char.Name); err != nil {
+            return nil, err
+        }
+        characters = append(characters, &char)
+    }
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return characters, nil
 }

@@ -54,7 +54,6 @@ func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter
     app.errorResponse(w, r, http.StatusUnauthorized, message)
 }
 
-
 func (app *application) authenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
     message := "you must be authenticated to access this resource"
     app.errorResponse(w, r, http.StatusUnauthorized, message)
@@ -68,3 +67,7 @@ func (app *application) notPermittedResponse(w http.ResponseWriter, r *http.Requ
     app.errorResponse(w, r, http.StatusForbidden, message)
 }
     
+func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+    app.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
+}
+  

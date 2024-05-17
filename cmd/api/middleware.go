@@ -5,7 +5,7 @@ import (
     "net/http"
     "strings"
     
-
+    "sanriohub.pavelkan.net/internal/validator"
     "sanriohub.pavelkan.net/internal/data"
 )
 
@@ -28,6 +28,13 @@ func (app *application) authenticate(next http.Handler) http.Handler {
         }
 
         token := headerParts[1]
+
+        v := validator.New()
+
+        if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+            app.invalidAuthenticationTokenResponse(w, r)
+            return
+        }
 
         user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
         if err != nil {

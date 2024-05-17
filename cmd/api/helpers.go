@@ -6,6 +6,7 @@ import (
     "strconv"
     "net/url"
 	"github.com/julienschmidt/httprouter"
+    "sanriohub.pavelkan.net/internal/validator"
     "fmt" 
     "io" 
     "strings"
@@ -95,7 +96,7 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
         return strings.Split(csv, ",")
     }
 
-    func (app *application) readInt(qs url.Values, key string, defaultValue int) int {
+    func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
         s:=qs.Get(key)
 
         if s == ""{
@@ -104,6 +105,7 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
         i, err := strconv.Atoi(s)
     
         if err != nil {
+            v.AddError(key, "must be an integer number")
             return defaultValue
         }
         
